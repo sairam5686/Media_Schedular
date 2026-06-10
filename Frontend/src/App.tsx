@@ -1,7 +1,8 @@
 import React from 'react'
-import { Sidebar, SidebarProvider, SidebarTrigger } from './Components/ui/sidebar';
+import {  SidebarProvider } from './Components/ui/sidebar';
 import AppSideBar from './Components/AppSideBar';
 import Dashboard from './Pages/Dashboard';
+import SocialConnection from './Pages/SocialConnection';
 
 const App = () => {
   return (
@@ -9,7 +10,7 @@ const App = () => {
       <AppSideBar />
 
       <main className="flex-1">
-        <Dashboard />
+        <SocialConnection />
       </main>
     </SidebarProvider>
   )
