@@ -9,34 +9,32 @@ import {
   SidebarMenuItem,
 } from "./ui/sidebar";
 
+import Logo from "../assets/Logo.svg";
+
 import {
-  Home,
-  User,
-  Settings,
+  LayoutDashboard,
+  Link2,
   FileText,
+  Sparkles,
   LogOut,
 } from "lucide-react";
 
 const menuItems = [
   {
     title: "Dashboard",
-    icon: Home,
-    url: "/",
+    icon: LayoutDashboard,
   },
   {
-    title: "Profile",
-    icon: User,
-    url: "/profile",
+    title: "Connects",
+    icon: Link2,
   },
   {
-    title: "Documents",
+    title: "Posts",
     icon: FileText,
-    url: "/documents",
   },
   {
-    title: "Settings",
-    icon: Settings,
-    url: "/settings",
+    title: "AI Generator",
+    icon: Sparkles,
   },
 ];
 
@@ -44,28 +42,56 @@ const AppSideBar = () => {
   return (
     <Sidebar side="left" collapsible="icon">
       {/* Header */}
-      <SidebarHeader className="p-4">
-        <h2 className="text-lg font-bold">My App</h2>
+      <SidebarHeader className="border-b">
+        <div className="flex  items-center gap-3 p-4">
+          <img src={Logo} alt="Logo" className="h-15 w-15 bg-gradient-to-r from-lime-100 to-teal-400 rounded-xl" />
+          <div>
+            <h2 className="font-bold text-lg">Social Scheduler</h2>
+            <p className="text-xs text-muted-foreground">
+              Manage your content
+            </p>
+          </div>
+        </div>
       </SidebarHeader>
 
-      {/* Main Navigation */}
-      <SidebarContent>
-        <SidebarMenu>
-         
+      {/* Navigation */}
+      <SidebarContent className="px-2 py-4">
+        <SidebarMenu className="">
+          {menuItems.map((item) => (
+            <SidebarMenuItem  key={item.title}>
+              <SidebarMenuButton
+                tooltip={item.title}
+                className="h-11 rounded-lg hover:bg-gradient-to-r from-lime-100 to-teal-400"
+              >
+                <item.icon className="h-5 w-5" />
+                <span>{item.title}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
         </SidebarMenu>
       </SidebarContent>
 
       {/* Footer */}
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton>
-              <LogOut className="h-4 w-4" />
-              <span>Logout</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
+<SidebarFooter className="border-t p-3">
+  <SidebarMenu>
+    <SidebarMenuItem>
+      <SidebarMenuButton className="h-14 rounded-xl">
+        <img
+          src="https://images.pexels.com/photos/30938726/pexels-photo-30938726.jpeg"
+          alt="Profile"
+          className="h-10 w-10 rounded-full object-cover"
+        />
+
+        <div className="flex flex-col items-start">
+          <span className="font-medium">Sai Ram</span>
+          <span className="text-xs text-muted-foreground">
+            Content Creator
+          </span>
+        </div>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  </SidebarMenu>
+</SidebarFooter>
     </Sidebar>
   );
 };
