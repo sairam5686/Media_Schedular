@@ -3,7 +3,8 @@ import {  SidebarProvider } from './Components/ui/sidebar';
 import AppSideBar from './Components/AppSideBar';
 import Dashboard from './Pages/Dashboard';
 import SocialConnection from './Pages/SocialConnection';
-import RuixenMoonChat from './Components/RuixenMoonChat';
+import RuixenMoonChat from './Pages/RuixenMoonChat';
+import { Outlet } from 'react-router';
 
 const App = () => {
   return (
@@ -11,7 +12,7 @@ const App = () => {
       <AppSideBar />
 
       <main className="flex-1">
-      <RuixenMoonChat />
+      <Outlet />
       </main>
     </SidebarProvider>
   )

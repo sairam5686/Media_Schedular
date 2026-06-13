@@ -18,27 +18,35 @@ import {
   Sparkles,
   LogOut,
 } from "lucide-react";
+import { useNavigate } from "react-router";
+
 
 const menuItems = [
   {
     title: "Dashboard",
     icon: LayoutDashboard,
+    link: "/"
   },
   {
     title: "Connects",
     icon: Link2,
+    link: "/socials"
   },
   {
     title: "Posts",
     icon: FileText,
+    link: "/poster"
   },
   {
     title: "AI Generator",
     icon: Sparkles,
+    link: "/aiposter"
   },
 ];
 
 const AppSideBar = () => {
+  const navigator = useNavigate();
+
   return (
     <Sidebar side="left" collapsible="icon">
       {/* Header */}
@@ -59,9 +67,10 @@ const AppSideBar = () => {
         <SidebarMenu className="">
           {menuItems.map((item) => (
             <SidebarMenuItem  key={item.title}>
-              <SidebarMenuButton
+              <SidebarMenuButton onClick={()=>navigator(item.link)}
                 tooltip={item.title}
                 className="h-11 rounded-lg hover:bg-gradient-to-r from-lime-100 to-teal-400"
+                
               >
                 <item.icon className="h-5 w-5" />
                 <span>{item.title}</span>
