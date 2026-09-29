@@ -1,7 +1,46 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import WorldMapDemo from '../Components/world-map-demo'
+import { useState } from 'react'
+import { FaAssistiveListeningSystems } from 'react-icons/fa'
+import { toast } from 'react-toastify'
 
 const Login = () => {
+
+  const navigate = useNavigate()
+  const [loginCred, setloginCred] = useState({
+    email: "" , 
+    password : ""
+  })
+
+  const onclickHandler = async () => {
+    try {
+
+      const res = await fetch("http://127.0.0.1:5000/login",
+        {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body:JSON.stringify(loginCred)
+        })
+
+        const data = await res.json();
+        if(res.status === 401){
+          toast.error(data.message)
+        }else if (res.status === 200 ){
+          toast.success(data.message)
+          navigate('/dashboard')
+        }
+
+
+    }
+    catch (error) {
+      console.log(error);
+    }
+  }
+
+
+
   return (
     <main className="grid min-h-screen bg-white lg:grid-cols-2">
       <section className="order-2 flex items-center justify-center px-6 py-12 sm:px-12 lg:order-1 lg:px-16">
@@ -22,12 +61,14 @@ const Login = () => {
             </p>
           </div>
 
-          <form className="mt-9 space-y-5" onSubmit={(event) => event.preventDefault()}>
+          <form className="mt-9 space-y-5" onSubmit={(event) => {event.preventDefault() ; onclickHandler()}}>
             <div>
               <label htmlFor="email" className="mb-2 block text-sm font-medium text-gray-800">
                 Email address
               </label>
               <input
+              onChange={(e)=>setloginCred(()=>({...loginCred ,  email:e.target.value}))}
+              value={loginCred.email}
                 id="email"
                 name="email"
                 type="email"
@@ -43,6 +84,8 @@ const Login = () => {
                 Password
               </label>
               <input
+              onChange={(e)=>setloginCred(()=>({...loginCred ,  password:e.target.value}))}
+              value={loginCred.password}
                 id="password"
                 name="password"
                 type="password"

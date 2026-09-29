@@ -27,6 +27,7 @@ const Signup = () => {
         
         const data = await response.json()
         if(response.status == 200 ){
+          toast.success(data.message)
           navigate('/dashboard');
         }else if(response.status == 409){
           toast(data.message); 
