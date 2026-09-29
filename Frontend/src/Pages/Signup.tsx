@@ -17,24 +17,21 @@ const Signup = () => {
        return ; 
     } else {
       try {
-        const response = await fetch("/signup", {
+        const response = await fetch("http://127.0.0.1:5000/signup", {
           method: "POST",
-          credentials: "include",
           headers: {
             'Content-Type': 'application/json', 
           },
           body: JSON.stringify(UserAuth)
         })
-
+        
         const data = await response.json()
         if(response.status == 200 ){
           navigate('/dashboard');
-        }else{
+        }else if(response.status == 409){
           toast(data.message); 
-          return
+          return ; 
         }
-
-
 
       } catch (error) {
         console.log(error);
