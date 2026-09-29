@@ -8,7 +8,8 @@ import { Outlet } from 'react-router';
 
 const App = () => {
   return (
-      <SidebarProvider>
+
+    <SidebarProvider>
       <AppSideBar />
 
       <main className="flex-1">

@@ -9,12 +9,15 @@ import Poster from './Pages/Poster.tsx';
 import RuixenMoonChat from './Pages/RuixenMoonChat.tsx';
 import Landing from './Pages/Landing.tsx';
 import Login from './Pages/Login.tsx';
-
+import Signup from './Pages/Signup.tsx';
+import { ToastContainer } from 'react-toastify';
+import "react-toastify/dist/ReactToastify.css";
 
 
 const routes = createBrowserRouter([
   {element: <Landing />, path: "/"},
   {element: <Login />,path: "/login"},
+  {element: <Signup />,path: "/signup"},
   
   {
   element: <App />,
@@ -27,9 +30,9 @@ const routes = createBrowserRouter([
 }
 ])
 
-createRoot(document.getElementById('root')!).render(
-
+createRoot(document.getElementById('root')!).render(<>
+        <ToastContainer />
   <RouterProvider router={routes} />
-
+</>
 )
 

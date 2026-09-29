@@ -25,7 +25,7 @@ const menuItems = [
   {
     title: "Dashboard",
     icon: LayoutDashboard,
-    link: "/"
+    link: "/dashboard"
   },
   {
     title: "Connects",
