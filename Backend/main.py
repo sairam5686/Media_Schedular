@@ -5,6 +5,7 @@ from flask_cors import CORS
 from flask.json import jsonify
 from DB_Connection.Conn import conn
 from werkzeug.security import generate_password_hash , check_password_hash
+from Credential_Helper import Connect_initilizer
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "NiqjDsrX6aKCYHOurDo7aCK2ft1OB4DvsSKY8ujx+KM="
@@ -52,6 +53,7 @@ def signup():
             
             mycur.execute(query , params)
             conn.commit()
+            Connect_initilizer(username=username , user_email=user_email)
             return jsonify({"message": "Account has been successfully created"}) , 200
     
     except mysql.connector.Error as e:

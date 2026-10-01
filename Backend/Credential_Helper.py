@@ -1,5 +1,6 @@
 from DB_Connection.Mongo_Conn import user_conn_details
 from DB_Connection.Conn import conn
+from mysql.connector import Error
 
 
 
@@ -13,9 +14,20 @@ def Connect_initilizer(username:str , user_email:str):
         result  = mycur.fetchone()
         print(result)
         user_id = result[0]
-        
+        temp =  {
+            "user_id": user_id , 
+            "username": username , 
+            "user_email": user_email , 
+            "facebook" : False , 
+            "instagram": False , 
+            "linkedin" :False , 
+            "Twitter" : False 
+        }
 
+        user_conn_details.insert_one(temp)
+
+    
     except Exception as e : 
-        pass
+        print(e)    
     finally:
         mycur.close()
