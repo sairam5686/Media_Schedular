@@ -15,9 +15,10 @@ const Login = () => {
   const onclickHandler = async () => {
     try {
 
-      const res = await fetch("http://127.0.0.1:5000/login",
+      const res = await fetch("http://localhost:5000/login",
         {
           method: "POST",
+          credentials: "include",
           headers: {
             'Content-Type': 'application/json',
           },

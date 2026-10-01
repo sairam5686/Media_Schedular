@@ -6,6 +6,9 @@ from flask.json import jsonify
 from DB_Connection.Conn import conn
 from werkzeug.security import generate_password_hash , check_password_hash
 from Credential_Helper import Connect_initilizer
+from DB_Connection.Mongo_Conn import user_conn_details
+from functools import wraps
+
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "NiqjDsrX6aKCYHOurDo7aCK2ft1OB4DvsSKY8ujx+KM="
@@ -96,6 +99,22 @@ def login():
 @app.route('/check')
 def checker():
     return "Nothing"
+
+
+@app.route('/connecteddetails' , methods=['GET'])
+@session_checker
+def connected_details():
+    user_id  =session.get('user_id')
+    data = user_conn_details.find_one({"user_id" :user_id  })
+    return jsonify({
+           "user_id" : data["user_id"] , 
+           "user_email" : data["user_email"] ,
+           "username" : data["username"] , 
+            "facebook" : data["facebook"] , 
+            "instagram" : data["instagram"] , 
+            "Twitter" : data["Twitter"] , 
+            "linkedin" : data["linkedin"]
+    })
 
 
 
