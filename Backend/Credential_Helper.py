@@ -1,7 +1,7 @@
 from DB_Connection.Mongo_Conn import user_conn_details
 from DB_Connection.Conn import conn
 from mysql.connector import Error
-
+from postpeer import PostPeer
 
 
 def Connect_initilizer(username:str , user_email:str):
@@ -14,6 +14,15 @@ def Connect_initilizer(username:str , user_email:str):
         result  = mycur.fetchone()
         print(result)
         user_id = result[0]
+
+        with PostPeer() as client:
+            profile = client.profiles.create(
+                name=username,
+                description=user_email,
+            )
+
+            peer_profile_id = profile.profile.id
+
         temp =  {
             "user_id": user_id , 
             "username": username , 
@@ -21,7 +30,8 @@ def Connect_initilizer(username:str , user_email:str):
             "facebook" : False , 
             "instagram": False , 
             "linkedin" :False , 
-            "Twitter" : False 
+            "twitter" : False   , 
+            "profile_cred" : peer_profile_id
         }
 
         user_conn_details.insert_one(temp)

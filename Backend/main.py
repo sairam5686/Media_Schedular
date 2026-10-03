@@ -8,6 +8,7 @@ from werkzeug.security import generate_password_hash , check_password_hash
 from Credential_Helper import Connect_initilizer
 from DB_Connection.Mongo_Conn import user_conn_details
 from functools import wraps
+from postpeer import PostPeer
 
 
 app = Flask(__name__)
@@ -96,9 +97,54 @@ def login():
         mycursor.close()
 
         
-@app.route('/check')
-def checker():
-    return "Nothing"
+@app.route('/connect/<platform>')
+@session_checker
+def checker(platform):
+    user_id = session.get('user_id')
+    data = user_conn_details.find_one({"user_id" :user_id  })
+    
+    profile_id = data["profile_cred"]
+    
+    
+    with PostPeer() as client:
+        result = client.connect.get_oauth_url(
+            platform=platform,
+            profile_id = profile_id , 
+            redirect_uri="http://localhost:5000/isconnected/{platform}/{user_id}/{profile_id}",
+        )
+
+    
+    return result.url
+
+
+
+@app.route('isconnected/<platform>/<user_id>/<profile_id>' , methods=['GET'])
+def confirmer( platform , user_id ,profile_id ):
+    with PostPeer() as client:
+        accounts = client.connect.integrations.list(
+            platform=platform,
+            profile_id = profile_id 
+        )
+        if(accounts.integrations):
+            account_id = accounts.integrations[0].id
+            display_name  = accounts.integrations[0].displayName
+
+        
+        temp = {
+            "user_id" : user_id , 
+            "profile_id" : profile_id , 
+            "account_id" : account_id ,
+            "Account_Name" : display_name
+        }
+
+
+
+
+
+
+
+
+
 
 
 @app.route('/connecteddetails' , methods=['GET'])
