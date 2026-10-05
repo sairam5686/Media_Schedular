@@ -4,14 +4,16 @@ import { Check, Link2, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FaFacebookF, FaInstagram, FaLinkedinIn, FaTwitter } from 'react-icons/fa'
+import { toast } from 'react-toastify'
 
 const SocialConnection = () => {
     const navigate = useNavigate()
     const [connectionDetails, setConnectionDetails] = useState({
-        Twitter: false,
+        twitter: false,
         facebook: false,
         instagram: false,
         linkedin: false,
+        threads:false , 
         username: '',
     })
     const [loading, setLoading] = useState(true)
@@ -43,8 +45,24 @@ const SocialConnection = () => {
         onLoadHandler()
     }, [])
 
+
+    const PlatformHandler =async (platform:string) =>{
+        const response_url = await fetch(`http://localhost:5000/connect/${platform}` , {method:'GET' , credentials:"include"})
+        if(response_url.status == 200 ){
+            const data = await response_url.json()
+            window.location.href = data.url; 
+        }else if(response_url.status === 403){
+            toast.error("Platform not available for now")
+        }else if(response_url.status ===500 ){
+            toast.error("Platform Server Error , Please try again later")
+        }
+    } 
+
+
+
+
     // Keys always come from the backend; defaults above cover the loading/error state
-    const { linkedin, instagram, facebook, Twitter: twitter, username } = connectionDetails
+    const { linkedin, instagram, facebook, twitter: twitter, username } = connectionDetails
 
     return (
         <div className="min-h-screen bg-slate-50">
@@ -93,7 +111,7 @@ const SocialConnection = () => {
                                     <Check className="size-4" /> Connected
                                 </span>
                             ) : (
-                                <Button variant="outline" size="sm" className="border-teal-200 text-teal-800 hover:bg-teal-50">
+                                <Button onClick={()=>PlatformHandler("linkedin")} variant="outline" size="sm" className="border-teal-200 text-teal-800 hover:bg-teal-50">
                                     Connect
                                 </Button>
                             )}
@@ -138,7 +156,7 @@ const SocialConnection = () => {
                                     <Check className="size-4" /> Connected
                                 </span>
                             ) : (
-                                <Button variant="outline" size="sm" className="border-teal-200 text-teal-800 hover:bg-teal-50">
+                                <Button onClick={()=>PlatformHandler("instagram")} variant="outline" size="sm" className="border-teal-200 text-teal-800 hover:bg-teal-50">
                                     Connect
                                 </Button>
                             )}
@@ -183,7 +201,7 @@ const SocialConnection = () => {
                                     <Check className="size-4" /> Connected
                                 </span>
                             ) : (
-                                <Button variant="outline" size="sm" className="border-teal-200 text-teal-800 hover:bg-teal-50">
+                                <Button onClick={()=>PlatformHandler("facebook")} variant="outline" size="sm" className="border-teal-200 text-teal-800 hover:bg-teal-50">
                                     Connect
                                 </Button>
                             )}
@@ -228,7 +246,7 @@ const SocialConnection = () => {
                                     <Check className="size-4" /> Connected
                                 </span>
                             ) : (
-                                <Button variant="outline" size="sm" className="border-teal-200 text-teal-800 hover:bg-teal-50">
+                                <Button onClick={()=>PlatformHandler("twitter")} variant="outline" size="sm" className="border-teal-200 text-teal-800 hover:bg-teal-50">
                                     Connect
                                 </Button>
                             )}

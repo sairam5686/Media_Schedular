@@ -1,13 +1,15 @@
 import Navbar from '@/Components/Navbar'
 import { Button } from '@/components/ui/button'
-import { CalendarDays, Check, Clock3, ImagePlus, Send } from 'lucide-react'
+import { CalendarDays, Check, Clock3,  ImagePlus, Send } from 'lucide-react'
 import { useState } from 'react'
-import { FaFacebookF, FaInstagram, FaLinkedinIn } from 'react-icons/fa'
+import { FaFacebookF, FaInstagram,   FaLinkedinIn, FaTwitter } from 'react-icons/fa'
+
 
 const platforms = [
-  { name: 'LinkedIn', icon: FaLinkedinIn, color: 'text-sky-700' },
-  { name: 'Instagram', icon: FaInstagram, color: 'text-rose-700' },
-  { name: 'Facebook', icon: FaFacebookF, color: 'text-blue-700' },
+  { name: 'linkedin', icon: FaLinkedinIn, color: 'text-sky-700' },
+  { name: 'instagram', icon: FaInstagram, color: 'text-rose-700' },
+  { name: 'facebook', icon: FaFacebookF, color: 'text-blue-700' },
+  { name: 'twitter', icon: FaTwitter, color: 'text-blue-00' },
 ]
 
 const publishedPosts = [
@@ -17,12 +19,43 @@ const publishedPosts = [
 
 const Poster = () => {
   const [content, setContent] = useState('')
-  const [selectedPlatforms, setSelectedPlatforms] = useState(['LinkedIn', 'Instagram'])
-  const [fileName, setFileName] = useState('')
+  const [selectedPlatforms, setSelectedPlatforms]=useState<string[]>([]);
+  
+  const [UserFile, setUserFile] = useState<File | null>();
+  const [UserDate, setUserDate] = useState<string>(); 
+  const [UserTime, setUserTime] = useState<string>();
+
+
+  const onSubmitHandler = async (e:any)=>{
+    e.preventDefault(); 
+    const Formdata = new FormData() ; 
+    if(UserFile){
+    Formdata.append("image" , UserFile) ;
+    }
+    Formdata.append("User_content" , content);    
+    Formdata.append( "Platform", JSON.stringify(selectedPlatforms));
+    Formdata.append("Date" , JSON.stringify(UserDate)); 
+    Formdata.append("Time" , JSON.stringify(UserTime)); 
+
+    try {
+      const response = await fetch('http://localhost:5000/poster' , 
+        {method:'POST' , credentials:'include' , body:Formdata} )
+
+      const data = response.json()  ; 
+      console.log(data);
+      
+
+    } catch (error) {
+      console.log(error);
+      
+    }
+
+  }
+
 
   const togglePlatform = (name: string) => {
-    setSelectedPlatforms((current) => current.includes(name)
-      ? current.filter((platform) => platform !== name)
+    setSelectedPlatforms((current:any) => current.includes(name)
+      ? current.filter((platform:any) => platform !== name)
       : [...current, name])
   }
 
@@ -30,6 +63,7 @@ const Poster = () => {
     <div className="min-h-screen bg-slate-50">
       <Navbar Title="Schedule & post" Para="Create content and plan when it goes live." />
       <main className="mx-auto grid max-w-7xl items-start gap-6 p-4 sm:p-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)] lg:p-8">
+      <form onSubmit={onSubmitHandler}>
         <section className="rounded-lg border border-slate-200 bg-white">
           <div className="border-b border-slate-100 px-5 py-4 sm:px-6">
             <h2 className="font-semibold text-slate-950">Compose post</h2>
@@ -54,7 +88,7 @@ const Poster = () => {
             <div>
               <div className="mb-2 flex items-center justify-between gap-3">
                 <label htmlFor="post-content" className="text-sm font-medium text-slate-800">Post content</label>
-                <span className={`text-xs tabular-nums ${content.length > 280 ? 'text-rose-700' : 'text-slate-400'}`}>{content.length} / 280</span>
+               
               </div>
               <textarea id="post-content" value={content} onChange={(event) => setContent(event.target.value)} placeholder="What would you like to share?" className="min-h-40 w-full resize-y rounded-md border border-slate-200 bg-white p-3.5 text-sm leading-6 text-slate-900 outline-none placeholder:text-slate-400 focus:border-teal-700 focus:ring-2 focus:ring-teal-700/15" />
             </div>
@@ -63,9 +97,9 @@ const Poster = () => {
               <p className="mb-2 text-sm font-medium text-slate-800">Media <span className="font-normal text-slate-400">Optional</span></p>
               <label className="flex min-h-24 cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed border-slate-300 bg-slate-50/70 px-4 py-5 text-center transition-colors hover:border-teal-600 hover:bg-teal-50/40">
                 <ImagePlus className="size-5 text-teal-800" />
-                <span className="text-sm font-medium text-slate-700">{fileName || 'Choose an image or video'}</span>
+                <span className="text-sm font-medium text-slate-700">{UserFile?.name ?? 'No file chosen'}</span>
                 <span className="text-xs text-slate-500">PNG, JPG or MP4</span>
-                <input className="sr-only" type="file" accept="image/*,video/*" onChange={(event) => setFileName(event.target.files?.[0]?.name ?? '')} />
+                <input className="sr-only" type="file" accept="image/*" onChange={(event) => setUserFile(event.target.files?.[0] ?? null)} />
               </label>
             </div>
 
@@ -73,23 +107,23 @@ const Poster = () => {
               <label className="block text-sm font-medium text-slate-800">Date
                 <span className="relative mt-2 block">
                   <CalendarDays className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-                  <input type="date" className="h-11 w-full rounded-md border border-slate-200 bg-white pl-10 pr-3 text-sm font-normal text-slate-700 outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/15" />
+                  <input type="date" onChange={(e)=>setUserDate(e.target.value)} className="h-11 w-full rounded-md border border-slate-200 bg-white pl-10 pr-3 text-sm font-normal text-slate-700 outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/15" />
                 </span>
               </label>
               <label className="block text-sm font-medium text-slate-800">Time
                 <span className="relative mt-2 block">
                   <Clock3 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-                  <input type="time" className="h-11 w-full rounded-md border border-slate-200 bg-white pl-10 pr-3 text-sm font-normal text-slate-700 outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/15" />
+                  <input type="time" onChange={(e)=>setUserTime(e.target.value)} className="h-11 w-full rounded-md border border-slate-200 bg-white pl-10 pr-3 text-sm font-normal text-slate-700 outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/15" />
                 </span>
               </label>
             </div>
 
             <div className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
-              <Button variant="outline" className="border-slate-200 text-slate-700">Save draft</Button>
-              <Button className="gap-2 bg-teal-700 text-white hover:bg-teal-800"><CalendarDays className="size-4" /> Schedule post</Button>
+              <Button type='submit' className="gap-2 bg-teal-700 text-white hover:bg-teal-800"><CalendarDays className="size-4" /> Schedule post</Button>
             </div>
           </div>
         </section>
+      </form>
 
         <aside className="space-y-6">
           <section className="rounded-lg border border-slate-200 bg-white">

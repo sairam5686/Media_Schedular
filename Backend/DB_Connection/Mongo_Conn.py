@@ -8,3 +8,4 @@ db = myclient['Socialmedia']
 
 # Collections
 user_conn_details = db['User_connection_details']
+User_account_details = db['Account_details']
