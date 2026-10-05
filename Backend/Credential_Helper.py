@@ -31,12 +31,12 @@ def Connect_initilizer(username:str , user_email:str):
             "instagram": False , 
             "linkedin" :False , 
             "twitter" : False   , 
+            "threads" : False , 
             "profile_cred" : peer_profile_id
         }
 
         user_conn_details.insert_one(temp)
 
-    
     except Exception as e : 
         print(e)    
     finally:

@@ -1,4 +1,4 @@
-from flask import Flask , request , session
+from flask import Flask , request , session , redirect
 import mysql.connector
 from mysql.connector import Error
 from flask_cors import CORS
@@ -9,7 +9,8 @@ from Credential_Helper import Connect_initilizer
 from DB_Connection.Mongo_Conn import user_conn_details
 from functools import wraps
 from postpeer import PostPeer
-
+from DB_Connection.Mongo_Conn import User_account_details
+import ast
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "NiqjDsrX6aKCYHOurDo7aCK2ft1OB4DvsSKY8ujx+KM="
@@ -97,7 +98,7 @@ def login():
         mycursor.close()
 
         
-@app.route('/connect/<platform>')
+@app.route('/connect/<platform>' , methods = ['GET'])
 @session_checker
 def checker(platform):
     user_id = session.get('user_id')
@@ -110,15 +111,14 @@ def checker(platform):
         result = client.connect.get_oauth_url(
             platform=platform,
             profile_id = profile_id , 
-            redirect_uri="http://localhost:5000/isconnected/{platform}/{user_id}/{profile_id}",
+            redirect_uri=f"http://localhost:5000/isconnected/{platform}/{user_id}/{profile_id}",
         )
-
     
-    return result.url
+    return jsonify(url=result.url)
 
 
 
-@app.route('isconnected/<platform>/<user_id>/<profile_id>' , methods=['GET'])
+@app.route('/isconnected/<platform>/<user_id>/<profile_id>' , methods=['GET'])
 def confirmer( platform , user_id ,profile_id ):
     with PostPeer() as client:
         accounts = client.connect.integrations.list(
@@ -127,24 +127,50 @@ def confirmer( platform , user_id ,profile_id ):
         )
         if(accounts.integrations):
             account_id = accounts.integrations[0].id
-            display_name  = accounts.integrations[0].displayName
+        user_id = int(user_id)
+        
+        if(platform.lower() == 'twitter'):
 
+            user_conn_details.update_one(
+                {"user_id": user_id},
+                {"$set": {"twitter": True}})
+
+        elif(platform.lower() == "instagram"):
+
+            user_conn_details.update_one(
+                    {"user_id": user_id},
+                    {"$set": {"instagram": True}})
+            
+        elif(platform.lower() == "threads"):
+
+            user_conn_details.update_one(
+                    {"user_id": user_id},
+                    {"$set": {"threads": True}})
+            
+        elif(platform.lower() == "linkedin"):
+
+            user_conn_details.update_one(
+                    {"user_id": user_id},
+                    {"$set": {"linkedin": True}})
+            
+
+        elif(platform.lower() == "facebook"):
+
+            user_conn_details.update_one(
+                    {"user_id": user_id},
+                    {"$set": {"facebook": True}})
+            
         
         temp = {
             "user_id" : user_id , 
             "profile_id" : profile_id , 
             "account_id" : account_id ,
-            "Account_Name" : display_name
+             
+            "platform":platform
         }
 
-
-
-
-
-
-
-
-
+        User_account_details.insert_one(temp)
+        return redirect("http://localhost:5173/socials")
 
 
 @app.route('/connecteddetails' , methods=['GET'])
@@ -158,10 +184,28 @@ def connected_details():
            "username" : data["username"] , 
             "facebook" : data["facebook"] , 
             "instagram" : data["instagram"] , 
-            "Twitter" : data["Twitter"] , 
+            "twitter" : data["twitter"] , 
             "linkedin" : data["linkedin"]
     })
 
+
+
+@app.route('/poster' , methods=['POST'])
+@session_checker
+def poster():
+
+    image = request.form.get("image") 
+    user_content = request.form.get("User_content")
+    user_platform  = ast.literal_eval(request.form.get("Platform"))
+    user_date  = request.form.get("Date")
+    user_time = request.form.get("Time")
+
+    
+
+
+
+
+    return jsonify({'message':'summa nothing'})
 
 
 if(__name__ == '__main__'):
