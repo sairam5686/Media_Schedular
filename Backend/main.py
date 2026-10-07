@@ -9,8 +9,13 @@ from Credential_Helper import Connect_initilizer
 from DB_Connection.Mongo_Conn import user_conn_details
 from functools import wraps
 from postpeer import PostPeer
-from DB_Connection.Mongo_Conn import User_account_details
+from DB_Connection.Mongo_Conn import User_account_details , User_post_details
 import ast
+from DB_Connection.Cloud_Conn import cloudinary
+import os
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from Api_Helper import Platform_maker
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "NiqjDsrX6aKCYHOurDo7aCK2ft1OB4DvsSKY8ujx+KM="
@@ -190,22 +195,109 @@ def connected_details():
 
 
 
+@app.route('/connected/platform' , methods=['GET'])
+@session_checker
+def connnected_platform():
+    platform = []
+    user_id = session.get('user_id')
+    data = user_conn_details.find_one({'user_id': user_id})
+    print(data)
+    if(data['facebook']):
+        platform.append('facebook')
+    if(data['instagram']):
+        platform.append('instagram')
+    if(data['twitter']):
+        platform.append('twitter')
+    if(data['linkedin']):
+        platform.append('linkedin')
+    if(data['threads']):
+        platform.append('threads')
+
+    print(platform)
+    return jsonify({"connected_platform" :platform }) , 200 
+
+
+
 @app.route('/poster' , methods=['POST'])
 @session_checker
 def poster():
-
-    image = request.form.get("image") 
+    
+    cloud_url = None
+    post_media = None
+    user_id = session.get('user_id')
+    image = request.files.get("image") 
     user_content = request.form.get("User_content")
     user_platform  = ast.literal_eval(request.form.get("Platform"))
     user_date  = request.form.get("Date")
     user_time = request.form.get("Time")
 
+    dt = datetime.strptime(f"{user_date} {user_time}", "%Y-%m-%d %H:%M")
+    utc = dt.replace(tzinfo=ZoneInfo("Asia/Kolkata")).astimezone(ZoneInfo("UTC"))
+
+    payload = {"scheduledFor": utc.strftime("%Y-%m-%dT%H:%M:%SZ"), "timezone": "UTC"}
+
+    utc = dt.replace(tzinfo=ZoneInfo("Asia/Kolkata")).astimezone(ZoneInfo("UTC"))
+
+    if utc <= datetime.now(ZoneInfo("UTC")):
+        return jsonify({'message': 'Time must be in the future'}), 400
+
+
+    if(image):
+        upload = cloudinary.uploader.upload(
+                    file=image,
+                    resource_type="image",
+                )
+        
+        cloud_url = upload.get("secure_url")
+        post_media = [{"type": "image", "url":cloud_url}]
     
+    platform_dict = Platform_maker( user_platform, int(user_id) )
+    if(cloud_url == None):
+        with PostPeer() as client:
+            post = client.posts.create(
+                content=user_content,
+                platforms=platform_dict,
+                scheduled_for=payload['scheduledFor'],
+                timezone="UTC",
+            )
+    else:
+        with PostPeer() as client:
+                    post = client.posts.create(
+                        content=user_content,
+                        platforms=platform_dict,
+                        scheduled_for=payload['scheduledFor'],
+                        timezone="UTC",
+                        media_items=post_media,
+
+                    )
+
+    temp = {
+        "user_id": user_id  ,
+        "post_id" : post.postId ,  
+        "post_content": user_content , 
+        "posting_platforms":  user_platform, 
+        "posting_date":user_date  , 
+        "posting_time":user_time ,  
+        "image_url": cloud_url  , 
+        "UTC_Timestamp": payload["scheduledFor"]
+    }
+
+    
+    User_post_details.insert_one(temp)
+    return jsonify({'message':'the Post has been scheduled'}) , 200
 
 
 
+@app.route('/post/list/<type>/<limit>' , methods=['GET'])
+def listing(type , limit):
+    limit = int(limit)
+    with PostPeer() as client:
+        posts = client.posts.list(
+            status=type,
+            limit=limit,
+        )
 
-    return jsonify({'message':'summa nothing'})
+    return jsonify(posts) , 200 
 
 
 if(__name__ == '__main__'):
