@@ -49,8 +49,12 @@ const AppSideBar = () => {
   const location = useLocation();
 
   return (
-    <Sidebar side="left" collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border/70 p-1">
+    <Sidebar
+      side="left"
+      collapsible="icon"
+      className="border-white/70 shadow-[4px_0_24px_-18px_rgba(15,23,42,0.3)] [&_[data-sidebar=sidebar-inner]]:bg-white/65 [&_[data-sidebar=sidebar-inner]]:backdrop-blur-2xl"
+    >
+      <SidebarHeader className="border-b border-white/70 p-1">
         <div className="flex items-center gap-3 rounded-xl p-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-lime-200 via-emerald-200 to-teal-300 shadow-sm ring-1 ring-emerald-900/5 group-data-[collapsible=icon]:size-8">
             <img
@@ -99,10 +103,10 @@ const AppSideBar = () => {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border/70 p-2">
+      <SidebarFooter className="border-t border-white/70 p-2">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton className="h-14 rounded-xl border border-sidebar-border/70 bg-background/50 px-2 hover:bg-sidebar-accent">
+            <SidebarMenuButton className="h-14 rounded-xl border border-white/80 bg-white/45 px-2 hover:bg-white/70">
               <span className="relative shrink-0">
                 <img
                   src="https://images.pexels.com/photos/30938726/pexels-photo-30938726.jpeg"

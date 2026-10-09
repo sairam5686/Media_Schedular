@@ -1,8 +1,9 @@
 import Navbar from '@/Components/Navbar'
 import { Button } from '@/components/ui/button'
-import { CalendarDays, Check, Clock3, ImagePlus, Send } from 'lucide-react'
+import { CalendarDays, Check, Clock3, Eye, ImagePlus, Send, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { FaFacebookF, FaInstagram, FaLinkedinIn, FaTwitter } from 'react-icons/fa'
+import { toast } from 'react-toastify'
 
 // Icon/color lookup keyed by the platform name the backend returns
 const platformMeta: Record<string, { icon: React.ElementType; color: string }> = {
@@ -12,10 +13,60 @@ const platformMeta: Record<string, { icon: React.ElementType; color: string }> =
   twitter: { icon: FaTwitter, color: 'text-blue-500' },
 }
 
-const publishedPosts = [
-  { text: 'We are thrilled to announce the official launch of our new AI course!', date: 'Today · 6:07 PM', platforms: 'LinkedIn, Instagram' },
-  { text: 'A little look at what we have been building this month.', date: 'Yesterday · 5:50 PM', platforms: 'Instagram' },
-]
+// Label colors used in the sidebar lists
+const platformLabelColor: Record<string, string> = {
+  linkedin: 'text-teal-800',
+  instagram: 'text-rose-800',
+  facebook: 'text-blue-800',
+  twitter: 'text-blue-600',
+}
+
+type ListedPost = {
+  id: string
+  content: string
+  platforms: string[]
+  date: string | null // ISO string
+  imageUrl: string | null
+}
+
+// The backend returns the PostPeer response as JSON. Field names are read in ONE place (here),
+// so if your JSON uses different keys, only edit this function.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const normalizePosts = (raw: any, dateKeys: string[]): ListedPost[] => {
+  const list: any[] = Array.isArray(raw)
+    ? raw
+    : (raw?.posts ?? raw?.data ?? raw?.items ?? raw?.results ?? [])
+
+  if (!Array.isArray(list)) return []
+
+  return list.map((p, index) => {
+    // platforms can be ["linkedin"], [{platform: "linkedin"}], or { linkedin: {...} }
+    let platforms: string[] = []
+    if (Array.isArray(p.platforms)) {
+      platforms = p.platforms.map((x: any) => (typeof x === 'string' ? x : x?.platform ?? x?.name ?? '')).filter(Boolean)
+    } else if (p.platforms && typeof p.platforms === 'object') {
+      platforms = Object.keys(p.platforms)
+    }
+
+    const date = dateKeys.map((k) => p[k]).find(Boolean) ?? null
+    const media = p.mediaItems ?? p.media_items ?? p.media ?? []
+
+    return {
+      id: String(p.postId ?? p.id ?? p._id ?? index),
+      content: p.content ?? p.text ?? p.post_content ?? '',
+      platforms: platforms.map((x) => x.toLowerCase()),
+      date,
+      imageUrl: Array.isArray(media) && media[0]?.url ? media[0].url : (p.image_url ?? null),
+    }
+  })
+}
+
+const formatPostDate = (iso: string | null) => {
+  if (!iso) return 'No date'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return 'No date'
+  return d.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
+}
 
 // Today's date as YYYY-MM-DD in the user's LOCAL time (toISOString would use UTC)
 const getTodayString = () => {
@@ -29,8 +80,13 @@ const Poster = () => {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([])
   const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>([])
   const [platformsLoading, setPlatformsLoading] = useState(true)
-  const [UserScheduledPostList, setUserScheduledPostList] = useState()
-  const [UserPublisherPostList, setUserPublisherPostList] = useState()
+
+  const [scheduledPosts, setScheduledPosts] = useState<ListedPost[]>([])
+  const [publishedPosts, setPublishedPosts] = useState<ListedPost[]>([])
+  const [postsLoading, setPostsLoading] = useState(true)
+
+  // Post currently open in the popup (null = closed), plus which list it came from
+  const [viewPost, setViewPost] = useState<{ post: ListedPost; kind: 'scheduled' | 'published' } | null>(null)
 
   const [UserFile, setUserFile] = useState<File | null>(null)
   const [fileInputKey, setFileInputKey] = useState(0)
@@ -56,6 +112,70 @@ const Poster = () => {
 
   const validationError = getError()
   const isValid = validationError === null
+
+  // ---------- Fetchers ----------
+  const PostListFetcher = async (type: string, limit: number) => {
+    const response = await fetch(`http://localhost:5000/post/list/${type}/${limit}`, {
+      method: 'GET',
+      credentials: 'include',
+    })
+    if (!response.ok) throw new Error(`Failed to fetch ${type} posts (${response.status})`)
+    return response.json()
+  }
+
+  const loadPosts = async () => {
+    try {
+      const [published, scheduled] = await Promise.all([
+        PostListFetcher('published', 3),
+        PostListFetcher('scheduled', 3),
+      ])
+      setPublishedPosts(normalizePosts(published, ['publishedAt', 'published_at', 'scheduledFor', 'scheduled_for', 'createdAt']))
+      setScheduledPosts(normalizePosts(scheduled, ['scheduledFor', 'scheduled_for', 'UTC_Timestamp', 'createdAt']))
+    } catch (error) {
+      console.log(error)
+    } finally {
+      setPostsLoading(false)
+    }
+  }
+
+  const UserPlatformFetcher = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/connected/platform', {
+        method: 'GET',
+        credentials: 'include',
+      })
+      const { connected_platform } = await response.json()
+      // expects an array of names, e.g. ["linkedin", "instagram"]
+      const names: string[] = Array.isArray(connected_platform) ? connected_platform.map((p: string) => p.toLowerCase()) : []
+      setConnectedPlatforms(names)
+      // drop any selected platform that is no longer connected
+      setSelectedPlatforms((current) => current.filter((p) => names.includes(p)))
+    } catch (error) {
+      console.log(error)
+    } finally {
+      setPlatformsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadPosts()
+    UserPlatformFetcher()
+  }, [])
+
+  // Close the popup with Escape and stop the page behind it from scrolling
+  useEffect(() => {
+    if (!viewPost) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setViewPost(null)
+    }
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [viewPost])
 
   // ---------- Submit ----------
   const onSubmitHandler = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -91,11 +211,12 @@ const Poster = () => {
 
       if (!response.ok) {
         setMessage({ type: 'error', text: data.message ?? 'Something went wrong.' })
+        toast.error('Invalid post')
         return
       }
 
       setMessage({ type: 'success', text: data.message ?? 'Post scheduled.' })
-
+      toast.success('Post has been scheduled Successfully')
       // Reset the form
       setContent('')
       setSelectedPlatforms([])
@@ -103,6 +224,8 @@ const Poster = () => {
       setFileInputKey((k) => k + 1) // clears the file input
       setUserDate('')
       setUserTime('')
+      // Refresh the sidebar so the new post shows up in "Upcoming"
+      loadPosts()
     } catch (error) {
       console.log(error)
       setMessage({ type: 'error', text: 'Could not reach the server.' })
@@ -110,35 +233,6 @@ const Poster = () => {
       setSubmitting(false)
     }
   }
-
-  const UserPlatformFetcher = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/connected/platform', {
-        method: 'GET',
-        credentials: 'include',
-      })
-      const { connected_platform } = await response.json()
-      // expects an array of names, e.g. ["linkedin", "instagram"]
-      const names: string[] = Array.isArray(connected_platform) ? connected_platform.map((p: string) => p.toLowerCase()) : []
-      setConnectedPlatforms(names)
-      // drop any selected platform that is no longer connected
-      setSelectedPlatforms((current) => current.filter((p) => names.includes(p)))
-    } catch (error) {
-      console.log(error)
-    } finally {
-      setPlatformsLoading(false)
-    }
-  }
-
-  const PostListFetcher = async (type: string, limit: number) => {
-    const response = await fetch(`http://localhost:5000/post/list/${type}/${limit}`, { method: 'GET', credentials: 'include' })
-    const data = await response.json()
-    return data
-  }
-
-  useEffect(() => {
-    UserPlatformFetcher()
-  }, [])
 
   const togglePlatform = (name: string) => {
     setSelectedPlatforms((current) =>
@@ -264,62 +358,145 @@ const Poster = () => {
           </section>
         </form>
 
-        {/* aside section unchanged */}
         <aside className="space-y-6">
+          {/* ---------- Upcoming (scheduled) ---------- */}
           <section className="rounded-lg border border-slate-200 bg-white">
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
               <div>
                 <h2 className="font-semibold text-slate-950">Upcoming</h2>
                 <p className="mt-1 text-sm text-slate-500">Ready to go out</p>
               </div>
-              <span className="rounded-md bg-teal-50 px-2.5 py-1 text-sm font-semibold tabular-nums text-teal-800">3</span>
+              <span className="rounded-md bg-teal-50 px-2.5 py-1 text-sm font-semibold tabular-nums text-teal-800">
+                {scheduledPosts.length}
+              </span>
             </div>
             <div className="divide-y divide-slate-100 px-5">
-              <article className="py-4">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs font-medium text-teal-800">LinkedIn</span>
-                  <span className="text-xs text-slate-500">Today, 2:30 PM</span>
-                </div>
-                <p className="mt-2 text-sm leading-5 text-slate-700">A few lessons from building in public this month.</p>
-              </article>
-              <article className="py-4">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs font-medium text-rose-800">Instagram</span>
-                  <span className="text-xs text-slate-500">Tomorrow, 10:00 AM</span>
-                </div>
-                <p className="mt-2 text-sm leading-5 text-slate-700">Behind the scenes from our latest launch.</p>
-              </article>
-              <article className="py-4">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs font-medium text-blue-800">Facebook</span>
-                  <span className="text-xs text-slate-500">Thu, 4:15 PM</span>
-                </div>
-                <p className="mt-2 text-sm leading-5 text-slate-700">What are you working on this week?</p>
-              </article>
+              {postsLoading && <p className="py-4 text-sm text-slate-500">Loading posts...</p>}
+
+              {!postsLoading && scheduledPosts.length === 0 && (
+                <p className="py-4 text-sm text-slate-500">Nothing scheduled yet. Schedule a post to see it here.</p>
+              )}
+
+              {scheduledPosts.map((post) => (
+                <article key={post.id} className="py-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="flex flex-wrap gap-x-2 text-xs font-medium capitalize">
+                      {post.platforms.length === 0 && <span className="text-slate-500">Post</span>}
+                      {post.platforms.map((name) => (
+                        <span key={name} className={platformLabelColor[name] ?? 'text-slate-600'}>{name}</span>
+                      ))}
+                    </span>
+                    <span className="shrink-0 text-xs text-slate-500">{formatPostDate(post.date)}</span>
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-sm leading-5 text-slate-700">{post.content}</p>
+                  <button
+                    type="button"
+                    onClick={() => setViewPost({ post, kind: 'scheduled' })}
+                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-teal-700 hover:text-teal-900"
+                  >
+                    <Eye className="size-3.5" /> View post
+                  </button>
+                </article>
+              ))}
             </div>
           </section>
 
+          {/* ---------- Recently published ---------- */}
           <section className="rounded-lg border border-slate-200 bg-white">
             <div className="border-b border-slate-100 px-5 py-4">
               <h2 className="font-semibold text-slate-950">Recently published</h2>
               <p className="mt-1 text-sm text-slate-500">Your latest posts</p>
             </div>
             <div className="divide-y divide-slate-100 px-5">
+              {postsLoading && <p className="py-4 text-sm text-slate-500">Loading posts...</p>}
+
+              {!postsLoading && publishedPosts.length === 0 && (
+                <p className="py-4 text-sm text-slate-500">No published posts yet.</p>
+              )}
+
               {publishedPosts.map((post) => (
-                <article key={post.text} className="py-4">
+                <article key={post.id} className="py-4">
                   <div className="flex items-center justify-between gap-3 text-xs">
-                    <span className="font-medium text-slate-600">{post.platforms}</span>
-                    <span className="shrink-0 text-slate-400">{post.date}</span>
+                    <span className="font-medium capitalize text-slate-600">{post.platforms.join(', ') || 'Post'}</span>
+                    <span className="shrink-0 text-slate-400">{formatPostDate(post.date)}</span>
                   </div>
-                  <p className="mt-2 line-clamp-2 text-sm leading-5 text-slate-700">{post.text}</p>
-                  <span className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700"><Check className="size-3.5" /> Published</span>
+                  <p className="mt-2 line-clamp-2 text-sm leading-5 text-slate-700">{post.content}</p>
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                      <Check className="size-3.5" /> Published
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setViewPost({ post, kind: 'published' })}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-teal-700 hover:text-teal-900"
+                    >
+                      <Eye className="size-3.5" /> View post
+                    </button>
+                  </div>
                 </article>
               ))}
             </div>
           </section>
-          <p className="flex items-start gap-2 px-1 text-xs leading-5 text-slate-500"><Send className="mt-0.5 size-3.5 shrink-0 text-teal-700" /> Posts will publish to the selected connected accounts at the scheduled time.</p>
+
+          <p className="flex items-start gap-2 px-1 text-xs leading-5 text-slate-500">
+            <Send className="mt-0.5 size-3.5 shrink-0 text-teal-700" /> Posts will publish to the selected connected accounts at the scheduled time.
+          </p>
         </aside>
       </main>
+
+      {/* ---------- Post popup ---------- */}
+      {viewPost && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"
+          onClick={() => setViewPost(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="post-dialog-title"
+            className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-lg border border-slate-200 bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
+              <div className="min-w-0">
+                <h2 id="post-dialog-title" className="font-semibold text-slate-950">
+                  {viewPost.kind === 'scheduled' ? 'Scheduled post' : 'Published post'}
+                </h2>
+                <p className="mt-1 text-sm capitalize text-slate-500">
+                  {viewPost.post.platforms.join(', ') || 'Post'} · {formatPostDate(viewPost.post.date)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewPost(null)}
+                aria-label="Close"
+                className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4 overflow-y-auto px-5 py-4">
+              <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-800">
+                {viewPost.post.content || 'This post has no text.'}
+              </p>
+              {viewPost.post.imageUrl && (
+                <img
+                  src={viewPost.post.imageUrl}
+                  alt="Post attachment"
+                  className="max-h-96 w-full rounded-md border border-slate-200 object-contain"
+                />
+              )}
+            </div>
+
+            <div className="flex justify-end border-t border-slate-100 px-5 py-3">
+              <Button type="button" variant="outline" onClick={() => setViewPost(null)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
