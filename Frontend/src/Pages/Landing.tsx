@@ -1,158 +1,260 @@
-import { ArrowRight, CalendarDays, ChartNoAxesCombined, Check, ChevronRight, Clock3, FileText, Layers3, Link2, Send } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import Logo from '../assets/Logo.svg'
+import { Menu, X } from 'lucide-react'
+import { Integrations } from '../Components/Integrations'
+import { BentoFeatures } from '../Components/BentoFeatures'
+import { Footer } from '../Components/Footer'
+import { ContactCTA } from '../Components/ContactCTA'
+import FAQ from '../Components/shadcn-studio/blocks/faq-component-01/faq-component-01'
 
-const previewBars = [
-  { day: 'Mon', height: 'h-10' },
-  { day: 'Tue', height: 'h-16' },
-  { day: 'Wed', height: 'h-12' },
-  { day: 'Thu', height: 'h-20' },
-  { day: 'Fri', height: 'h-14' },
-  { day: 'Sat', height: 'h-24' },
-  { day: 'Sun', height: 'h-16' },
+// ── Constants & Data ──────────────────────────────────────────
+
+const NAV_LINKS = [
+  { name: 'Features', href: '#features' },
+  { name: 'Integrations', href: '#integrations' },
+  { name: 'FAQ', href: '#faq' },
+  { name: 'Contact', href: '#contact' },
 ]
 
-const previewPosts = [
-  { network: 'LinkedIn', color: 'bg-sky-100 text-sky-800', initials: 'in', time: 'Today, 2:30 PM', text: 'A few lessons from building in public this month.' },
-  { network: 'Instagram', color: 'bg-rose-100 text-rose-800', initials: 'ig', time: 'Tomorrow, 10:00 AM', text: 'Behind the scenes from our latest launch.' },
-]
+// ── Sub-components ────────────────────────────────────────────
 
-const features = [
-  { icon: CalendarDays, title: 'Plan in one view', text: 'See what is scheduled and keep every channel moving.' },
-  { icon: Layers3, title: 'Publish together', text: 'Prepare your content once and organize it by platform.' },
-  { icon: ChartNoAxesCombined, title: 'Learn as you grow', text: 'Understand what is resonating with your audience.' },
-]
+const LogoIcon = () => (
+  <div className="flex h-6 w-6 items-center justify-center text-emerald-500">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="w-full h-full"
+    >
+      <circle cx="12" cy="12" r="10" fill="currentColor" fillOpacity="0.1" />
+      <path d="M12 2V6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M12 18V22" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M4.93 4.93L7.76 7.76" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M16.24 16.24L19.07 19.07" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M2 12H6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M18 12H22" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M4.93 19.07L7.76 16.24" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M16.24 7.76L19.07 4.93" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      <circle cx="12" cy="12" r="3" fill="currentColor" />
+    </svg>
+  </div>
+)
+
+const Navbar = () => {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [activeSection, setActiveSection] = useState('')
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const sections = ['features', 'integrations', 'faq', 'contact']
+      const scrollPosition = window.scrollY + 200
+
+      for (const sectionId of sections) {
+        const el = document.getElementById(sectionId)
+        if (el) {
+          const top = el.offsetTop
+          const height = el.offsetHeight
+          if (scrollPosition >= top && scrollPosition < top + height) {
+            setActiveSection(sectionId)
+            return
+          }
+        }
+      }
+      if (window.scrollY < 300) {
+        setActiveSection('')
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  return (
+    <>
+      <nav className="fixed top-5 left-1/2 z-50 flex w-[92%] max-w-[720px] -translate-x-1/2 items-center justify-between rounded-full bg-neutral-950/70 p-2 sm:p-2.5 backdrop-blur-2xl border border-white/15 shadow-[0_12px_40px_0_rgba(0,0,0,0.3)] ring-1 ring-white/10 transition-all">
+        {/* Specular top highlight */}
+        <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+
+        {/* Logo */}
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault()
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+          className="flex items-center gap-2 pl-2 group cursor-pointer"
+        >
+          <LogoIcon />
+          <span className="text-base font-bold tracking-tight text-white group-hover:text-white/90 transition-colors">
+            Supermi
+          </span>
+        </a>
+
+        {/* Section Links */}
+        <div className="hidden items-center gap-1 md:flex">
+          {NAV_LINKS.map((link) => {
+            const isActive = activeSection === link.href.replace('#', '')
+            return (
+              <a
+                key={link.name}
+                href={link.href}
+                className={`rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all ${
+                  isActive
+                    ? 'bg-white/20 text-white shadow-xs'
+                    : 'text-neutral-300 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                {link.name}
+              </a>
+            )
+          })}
+        </div>
+
+        {/* Right side Actions */}
+        <div className="flex items-center gap-2">
+          <Link
+            to="/login"
+            className="cursor-pointer rounded-full bg-white px-4.5 py-1.5 text-xs font-semibold text-neutral-950 shadow-sm transition-all hover:bg-neutral-100 hover:scale-105 active:scale-95"
+          >
+            Login
+          </Link>
+
+          {/* Mobile menu trigger */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="flex md:hidden size-8 items-center justify-center rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+            aria-label="Toggle navigation menu"
+          >
+            {mobileMenuOpen ? <X className="size-4.5" /> : <Menu className="size-4.5" />}
+          </button>
+        </div>
+      </nav>
+
+      {/* Mobile Dropdown Menu */}
+      {mobileMenuOpen && (
+        <div className="fixed top-20 left-1/2 z-50 w-[92%] max-w-[720px] -translate-x-1/2 overflow-hidden rounded-2xl bg-neutral-950/85 p-4 backdrop-blur-2xl border border-white/15 shadow-2xl md:hidden animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex flex-col gap-2">
+            {NAV_LINKS.map((link) => (
+              <a
+                key={link.name}
+                href={link.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-xl px-4 py-2.5 text-sm font-medium text-neutral-200 hover:bg-white/10 hover:text-white transition-colors"
+              >
+                {link.name}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+const Badge = ({ children }: { children: React.ReactNode }) => (
+  <div className="mb-8">
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/80 bg-white/90 backdrop-blur-sm px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-800 shadow-sm">
+      <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+      {children}
+    </span>
+  </div>
+)
+
+const HeroContent = () => (
+  <div className="relative flex flex-col items-center px-4 pt-40 pb-16 text-center z-10">
+    <Badge>Unlock Conversational Power</Badge>
+
+    {/* Main heading */}
+    <h1 className="max-w-[900px] mx-auto text-3xl font-bold tracking-[-0.03em] text-[#1a1a1a] sm:text-5xl md:text-6xl md:leading-[1.1]">
+      Empower Your <br className="hidden sm:block" />
+      Conversations with Next-Gen <br className="hidden sm:block" />
+      Messaging Dashboard
+    </h1>
+
+    {/* Subtitle */}
+    <p className="mt-8 max-w-xl mx-auto text-base text-gray-600 font-normal leading-relaxed md:text-lg">
+      Unlock seamless communication and streamline your messaging{' '}
+      <br className="hidden md:block" /> experience with our innovative dashboard
+      solution
+    </p>
+
+    {/* CTA */}
+    <div className="mt-10">
+      <Link
+        to="/signup"
+        className="rounded-full bg-teal-700 px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-teal-700/25 transition-all hover:bg-teal-800 hover:-translate-y-0.5 hover:shadow-xl active:scale-98"
+      >
+        Get Started
+      </Link>
+    </div>
+  </div>
+)
+
+
+const DashboardPreview = () => (
+  <div className="relative z-10 mx-auto w-full px-4 lg:px-64 -mb-64">
+    <div className="relative rounded-t-2xl bg-white/40 backdrop-blur-sm p-4 ring-1 ring-white/50">
+      <img
+        src="https://placehold.co/1200x750/fafafa/e5e5e5/png?text=Dashboard+Preview"
+        alt="App Dashboard"
+        className="w-full h-auto rounded-xl shadow-sm block"
+      />
+      <div className="absolute inset-0 pointer-events-none rounded-xl ring-1 ring-black/5" />
+    </div>
+  </div>
+)
+
+const BackgroundEffects = () => (
+  <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden rounded-[50px]">
+    {/* Top fade — white */}
+    <div className="absolute top-0 w-full h-[40%] bg-gradient-to-b from-white to-transparent z-10" />
+
+    {/* Centre radiant emerald */}
+    <div className="absolute top-[20%] left-[20%] w-[900px] h-[700px] bg-[#10b981] opacity-50 blur-[130px] rounded-full animate-blob mix-blend-multiply filter" />
+
+    {/* Right deep forest teal */}
+    <div className="absolute top-[30%] right-[-10%] w-[700px] h-[700px] bg-[#0f766e] opacity-45 blur-[120px] rounded-full animate-blob animation-delay-2000 mix-blend-multiply filter" />
+
+    {/* Left luminous lime/mint */}
+    <div className="absolute top-[40%] left-[-10%] w-[700px] h-[700px] bg-[#a3e635] opacity-40 blur-[120px] rounded-full animate-blob animation-delay-4000 mix-blend-multiply filter" />
+
+    {/* Grid pattern on top of blobs */}
+    <div className="absolute inset-0 bg-grid-refined opacity-[0.6] z-0" />
+  </div>
+)
+
+// ── Landing Page ──────────────────────────────────────────────
 
 const Landing = () => {
   return (
-    <main className="min-h-screen overflow-hidden bg-[#fbfdfb] text-slate-950">
-      <header className="relative z-10 border-b border-emerald-950/10 bg-white/90 backdrop-blur">
-        <nav aria-label="Main navigation" className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link to="/" className="flex items-center gap-2.5" aria-label="Social Scheduler home">
-            <span className="flex size-9 items-center justify-center rounded-md bg-gradient-to-br from-lime-100 to-teal-400 p-1.5">
-              <img src={Logo} alt="" className="size-full object-contain" />
-            </span>
-            <span className="text-base font-bold text-slate-950">Social Scheduler</span>
-          </Link>
-          <div className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
-            <a href="#workspace" className="transition-colors hover:text-teal-800">Workspace</a>
-            <a href="#features" className="transition-colors hover:text-teal-800">Features</a>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link to="/login" className="hidden px-2 py-2 text-sm font-semibold text-slate-700 transition-colors hover:text-teal-800 sm:inline-flex">Log in</Link>
-            <Link to="/signup" className="inline-flex h-10 items-center gap-2 rounded-md bg-teal-800 px-4 text-sm font-semibold text-white transition-colors hover:bg-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2">
-              Get started <ArrowRight className="size-4" />
-            </Link>
-          </div>
-        </nav>
-      </header>
-
-      <section className="relative bg-[#eff7f1]">
-        <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(#b9d0c0_0.8px,transparent_0.8px)] bg-[size:20px_20px] opacity-35" />
-        <div className="relative mx-auto max-w-7xl px-4 pb-10 pt-14 sm:px-6 sm:pb-14 sm:pt-16 lg:px-8">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="inline-flex items-center gap-2 text-xs font-bold uppercase text-teal-900">
-              <span className="size-2 rounded-full bg-lime-600" /> Your social publishing workspace
-            </p>
-            <h1 className="mt-5 text-4xl font-semibold leading-tight text-slate-950 sm:text-5xl">
-              Social media, <span className="text-teal-800">on schedule.</span>
-            </h1>
-            <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-              Plan your posts, keep every channel in sync, and make room for the work behind the feed.
-            </p>
-            <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
-              <Link to="/signup" className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-teal-800 px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2">
-                Create your workspace <ArrowRight className="size-4" />
-              </Link>
-              <a href="#features" className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white/80 px-5 text-sm font-semibold text-slate-800 transition-colors hover:bg-white">
-                Explore features <ChevronRight className="size-4" />
-              </a>
-            </div>
-          </div>
-
-          <div id="workspace" className="mx-auto mt-10 max-w-5xl overflow-hidden rounded-lg border border-slate-200 bg-white text-left shadow-[0_24px_70px_-38px_rgba(15,75,57,0.45)] sm:mt-12">
-            <div className="flex h-11 items-center justify-between border-b border-slate-200 bg-white px-3 sm:px-5">
-              <div className="flex items-center gap-2">
-                <span className="flex size-6 items-center justify-center rounded bg-teal-50"><CalendarDays className="size-3.5 text-teal-800" /></span>
-                <span className="text-xs font-semibold text-slate-800 sm:text-sm">Social Scheduler</span>
-              </div>
-              <div className="flex items-center gap-2 text-[11px] text-slate-500 sm:text-xs">
-                <span className="size-1.5 rounded-full bg-emerald-500" /> Workspace preview
-              </div>
-            </div>
-
-            <div className="grid min-h-72 md:grid-cols-[145px_1fr]">
-              <aside className="hidden border-r border-slate-100 bg-[#f7faf8] p-3 md:block">
-                <p className="px-2 pb-3 pt-1 text-[10px] font-bold uppercase text-slate-400">Workspace</p>
-                <div className="space-y-1 text-xs font-medium">
-                  <p className="flex items-center gap-2 rounded bg-teal-50 px-2 py-2 text-teal-900"><ChartNoAxesCombined className="size-3.5" /> Overview</p>
-                  <p className="flex items-center gap-2 px-2 py-2 text-slate-500"><Link2 className="size-3.5" /> Accounts</p>
-                  <p className="flex items-center gap-2 px-2 py-2 text-slate-500"><FileText className="size-3.5" /> Posts</p>
-                </div>
-                <div className="mt-8 border-t border-slate-200 pt-4">
-                  <p className="px-2 text-[10px] font-bold uppercase text-slate-400">Connected</p>
-                  <p className="mt-3 flex items-center gap-2 px-2 text-xs text-slate-600"><span className="flex size-5 items-center justify-center rounded bg-sky-100 text-[9px] font-bold text-sky-800">in</span> LinkedIn</p>
-                  <p className="mt-2 flex items-center gap-2 px-2 text-xs text-slate-600"><span className="flex size-5 items-center justify-center rounded bg-rose-100 text-[9px] font-bold text-rose-800">ig</span> Instagram</p>
-                </div>
-              </aside>
-
-              <div className="min-w-0 p-3 sm:p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-[10px] font-medium text-slate-400 sm:text-xs">TUESDAY, SEPTEMBER 29</p>
-                    <h2 className="mt-1 text-sm font-semibold text-slate-950 sm:text-base">Your week at a glance</h2>
-                  </div>
-                  <span className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded bg-teal-800 px-2.5 text-[11px] font-semibold text-white sm:text-xs"><Send className="size-3" /> New post</span>
-                </div>
-
-                <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
-                  <div className="rounded border border-slate-100 p-2.5 sm:p-3"><p className="text-[10px] text-slate-500 sm:text-xs">Impressions</p><p className="mt-1 text-base font-semibold tabular-nums sm:text-lg">8,420</p><p className="text-[10px] font-medium text-teal-800">+18.2%</p></div>
-                  <div className="rounded border border-slate-100 p-2.5 sm:p-3"><p className="text-[10px] text-slate-500 sm:text-xs">Engagement</p><p className="mt-1 text-base font-semibold tabular-nums sm:text-lg">1,284</p><p className="text-[10px] font-medium text-teal-800">+8.4%</p></div>
-                  <div className="rounded border border-slate-100 p-2.5 sm:p-3"><p className="text-[10px] text-slate-500 sm:text-xs">Scheduled</p><p className="mt-1 text-base font-semibold tabular-nums sm:text-lg">03</p><p className="text-[10px] font-medium text-slate-400">This week</p></div>
-                </div>
-
-                <div className="mt-3 grid gap-3 sm:grid-cols-[1.1fr_0.9fr]">
-                  <div className="rounded border border-slate-100 p-3">
-                    <div className="flex items-center justify-between"><p className="text-xs font-semibold text-slate-800">Audience reach</p><span className="text-[10px] text-slate-400">Last 7 days</span></div>
-                    <div className="mt-3 flex h-20 items-end justify-between gap-1.5 border-b border-slate-100 px-1">
-                      {previewBars.map(({ day, height }, index) => <div key={day} className="flex h-full flex-1 flex-col items-center justify-end gap-1"><span className={`w-full max-w-6 rounded-t-sm ${height} ${index === 5 ? 'bg-teal-700' : 'bg-teal-100'}`} /><span className="pb-1 text-[9px] text-slate-400">{day}</span></div>)}
-                    </div>
-                  </div>
-                  <div className="rounded border border-slate-100 p-3">
-                    <p className="text-xs font-semibold text-slate-800">Coming up</p>
-                    <div className="mt-2 divide-y divide-slate-100">
-                      {previewPosts.map((post) => <div key={post.network} className="flex gap-2 py-2 first:pt-0 last:pb-0"><span className={`flex size-6 shrink-0 items-center justify-center rounded text-[9px] font-bold ${post.color}`}>{post.initials}</span><div className="min-w-0"><p className="text-[10px] font-medium text-slate-700">{post.network} <span className="font-normal text-slate-400">· {post.time}</span></p><p className="mt-0.5 line-clamp-1 text-[10px] text-slate-500">{post.text}</p></div></div>)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen w-full bg-white">
+      <div className="p-4 pb-0">
+        <div className="relative w-full overflow-hidden rounded-[50px] bg-slate-50 border-t border-slate-200/80">
+          <BackgroundEffects />
+          <Navbar />
+          <HeroContent />
+          <DashboardPreview />
         </div>
+      </div>
+
+      {/* Core Features: Bento Grid */}
+      <BentoFeatures />
+
+      {/* Integrations Section */}
+      <section id="integrations" className="bg-white py-20 px-4 scroll-mt-16">
+        <Integrations />
       </section>
 
-      <section id="features" className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-        <div className="grid gap-8 border-b border-slate-200 pb-10 md:grid-cols-3 md:gap-10">
-          {features.map(({ icon: Icon, title, text }) => (
-            <article key={title} className="flex gap-4">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-lime-100 text-teal-900"><Icon className="size-5" /></span>
-              <div><h2 className="text-sm font-semibold text-slate-950">{title}</h2><p className="mt-1.5 text-sm leading-6 text-slate-600">{text}</p></div>
-            </article>
-          ))}
-        </div>
-        <div className="flex flex-col justify-between gap-4 pt-8 sm:flex-row sm:items-center">
-          <div className="flex items-center gap-2 text-sm text-slate-500"><Check className="size-4 text-teal-800" /> A clearer rhythm for your social channels.</div>
-          <Link to="/signup" className="inline-flex items-center gap-2 text-sm font-semibold text-teal-800 hover:text-teal-950">Start planning <ArrowRight className="size-4" /></Link>
-        </div>
-      </section>
+      {/* FAQ Section */}
+      <FAQ />
 
-      <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-          <span>© 2026 Social Scheduler</span>
-          <Link to="/login" className="inline-flex items-center gap-1 font-medium text-slate-600 hover:text-teal-800">Already have an account? Log in <ChevronRight className="size-3.5" /></Link>
-        </div>
-      </footer>
-    </main>
+      {/* Contact / CTA Section */}
+      <ContactCTA />
+
+      {/* Footer */}
+      <Footer />
+    </div>
   )
 }
 
