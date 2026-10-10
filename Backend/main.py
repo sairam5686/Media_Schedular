@@ -321,7 +321,7 @@ def ai_response():
         # how it should behave throughout the conversation.
         {
             "role": "system",
-            "content": """You are a social media content generator. Generate engaging, platform-appropriate text content strictly based on the user's provided context.
+            "content": """You are a social media content generator. Generate engaging, platform-appropriate text content strictly based on the user's provided context in the markdown format.
                     Rules:
                     1. If the input is relevant to social media content creation, generate the requested content using the given context. Do not invent facts or add unsupported details.
                     2. If the input is irrelevant, vague, or unrelated to content creation (e.g., "Hi", "What is an apple?", "Tell me a joke"), respond exactly: "I can only help generate social media content based on the provided context."
@@ -343,7 +343,7 @@ def ai_response():
         )
 
 
-       
+        print( chat_completion.choices[0].message.content)
         return jsonify({'message': chat_completion.choices[0].message.content}) , 200
 
     except Error:

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 
 import { AlertCircle, ArrowUp, Bot, Loader2, RotateCcw, Sparkles } from "lucide-react";
 import Grainient from "../Components/Grainient";
 import { Textarea } from "../Components/ui/textarea";
+import ReactMarkdown from "react-markdown";
 
 interface ChatMessage {
   id: number;
@@ -181,8 +182,8 @@ const RuixenMoonChat = () => {
                 chatMessage.role === "user" ? (
                   // User bubble
                   <div key={chatMessage.id} className="flex justify-end">
-                    <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-emerald-800 px-4 py-3 text-sm leading-6 text-white shadow-sm sm:max-w-[75%]">
-                      <p className="whitespace-pre-wrap break-words">{chatMessage.content}</p>
+                    <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-emerald-800 px-4 py-3 text-sm leading-6 text-white shadow-sm sm:max-w-[75%] whitespace-pre-wrap break-words">
+                      <ReactMarkdown>{chatMessage.content}</ReactMarkdown>
                     </div>
                   </div>
                 ) : (
@@ -206,7 +207,7 @@ const RuixenMoonChat = () => {
                           : "border-slate-200 bg-white text-slate-700"
                       }`}
                     >
-                      <p className="whitespace-pre-wrap break-words">{chatMessage.content}</p>
+                      <p className="whitespace-pre-wrap break-words"><ReactMarkdown>{chatMessage.content}</ReactMarkdown></p>
 
                       {chatMessage.retryPrompt && (
                         <button
