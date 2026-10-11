@@ -10,3 +10,6 @@ db = myclient['Socialmedia']
 user_conn_details = db['User_connection_details']
 User_account_details = db['Account_details']
 User_post_details = db['User_postes']
+Conversation_Metadata = db['Conversation_Metadata']
+Conversation_Storage = db['Conversation_Storage']
+
