@@ -1,4 +1,3 @@
-
 import {
   useCallback,
   useEffect,
@@ -11,9 +10,12 @@ import {
   AlertCircle,
   ArrowUp,
   Bot,
+  ChevronLeft,
+  ChevronRight,
   Loader2,
   RotateCcw,
   Sparkles,
+  History,
   MessageSquare,
   Plus,
 } from "lucide-react";
@@ -46,6 +48,61 @@ const REQUEST_TIMEOUT_MS = 30000;
 const MIN_TEXTAREA_HEIGHT = 52;
 const MAX_TEXTAREA_HEIGHT = 160;
 
+const formatDate = (value?: string) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const HistoryRow = ({
+  conversation,
+  onClick,
+  disabled,
+  active,
+}: {
+  conversation: Conversation;
+  onClick: () => void;
+  disabled?: boolean;
+  active?: boolean;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    aria-current={active ? "true" : undefined}
+    aria-label={`Chat ${conversation.conversation_id.slice(0, 8)}${
+      formatDate(conversation.created_at)
+        ? `, ${formatDate(conversation.created_at)}`
+        : ""
+    }`}
+    title={`Chat ${conversation.conversation_id.slice(0, 8)}`}
+    className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition hover:bg-white/70 disabled:opacity-50 ${
+      active
+        ? "bg-emerald-100/80 font-medium text-emerald-950"
+        : "text-slate-600"
+    }`}
+  >
+    <span className="flex min-w-0 items-center gap-1.5">
+      <MessageSquare className="size-3.5 shrink-0 text-slate-400" />
+      <span className="truncate">
+        Chat {conversation.conversation_id.slice(0, 8)}
+      </span>
+    </span>
+    <span className="shrink-0 text-[10px] text-slate-500">
+      {formatDate(conversation.created_at)}
+    </span>
+  </button>
+);
+
+/* ------------------------------------------------------------------ */
+/* Main chat component                                                 */
+/* ------------------------------------------------------------------ */
+
 const RuixenMoonChat = () => {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -54,6 +111,7 @@ const RuixenMoonChat = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const nextMessageId = useRef(0);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -182,11 +240,7 @@ const RuixenMoonChat = () => {
         const list: Conversation[] = Array.isArray(data) ? data : [];
         setConversations(list);
 
-        // Open the latest conversation, if one exists.
-        if (list.length > 0) {
-          const latest = list[list.length - 1];
-          await loadConversation(latest.conversation_id);
-        }
+        // Always start on the new-chat screen; old chats open only when selected.
       } catch (error) {
         if (!cancelled) {
           setHistoryError(
@@ -203,7 +257,7 @@ const RuixenMoonChat = () => {
     return () => {
       cancelled = true;
     };
-  }, [loadConversation]);
+  }, []);
 
   // POST /conversations
   const createConversation = async (): Promise<string> => {
@@ -234,7 +288,7 @@ const RuixenMoonChat = () => {
     return id;
   };
 
-  // Start a new, empty chat. Create its backend record when needed.
+  // Show the new-chat screen. The backend record is created on first send.
   const startNewChat = () => {
     if (requestInProgress.current || isHistoryLoading) return;
 
@@ -346,11 +400,7 @@ const RuixenMoonChat = () => {
   const sendMessage = async () => {
     const prompt = message.trim();
 
-    if (
-      !prompt ||
-      requestInProgress.current ||
-      isHistoryLoading
-    ) {
+    if (!prompt || requestInProgress.current || isHistoryLoading) {
       return;
     }
 
@@ -431,208 +481,266 @@ const RuixenMoonChat = () => {
   };
 
   return (
-    <section className="ruixen-chat relative isolate flex h-screen min-h-0 flex-col overflow-hidden bg-[#f7faf8]">
+    <section className="ruixen-chat relative isolate flex h-screen min-h-0 overflow-hidden bg-[#f7faf8]">
       <Grainient />
 
-      {/* Conversation controls */}
-      <header className="relative z-10 flex items-center gap-3 border-b border-slate-200/70 bg-white/40 px-4 py-3 backdrop-blur-xl sm:px-6">
-        <button
-          type="button"
-          onClick={startNewChat}
-          disabled={isLoading || isHistoryLoading}
-          className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-emerald-800 px-3 py-2 text-sm font-medium text-white transition hover:bg-emerald-900 disabled:opacity-50"
-        >
-          <Plus className="size-4" />
-          New chat
-        </button>
-
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <MessageSquare className="size-4 shrink-0 text-slate-500" />
-          <select
-            aria-label="Chat history"
-            value={conversationId ?? ""}
-            onChange={(event) => {
-              if (event.target.value) {
-                void loadConversation(event.target.value);
-              } else {
-                startNewChat();
-              }
-            }}
-            disabled={isLoading || isHistoryLoading}
-            className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white/80 px-2 py-2 text-sm text-slate-700 outline-none focus:border-emerald-500 disabled:opacity-50"
-          >
-            <option value="">New conversation</option>
-            {conversations.map((conversation) => (
-              <option
-                key={conversation.conversation_id}
-                value={conversation.conversation_id}
-              >
-                Chat {conversation.conversation_id.slice(0, 8)}
-              </option>
-            ))}
-          </select>
-        </div>
-      </header>
-
-      <main
-        aria-label="Chat with Ruixen AI"
-        className="relative z-10 min-h-0 flex-1 overflow-y-auto px-4 py-8 sm:px-6"
+      <aside
+        aria-label="Chat navigation"
+        className={`relative z-10 flex shrink-0 flex-col border-r border-slate-200/70 bg-white/45 backdrop-blur-xl transition-[width] duration-200 ${
+          isSidebarCollapsed ? "w-14" : "w-52 sm:w-60"
+        }`}
       >
-        <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col">
-          {isHistoryLoading ? (
-            <div className="flex flex-1 items-center justify-center gap-2 text-sm text-slate-500">
-              <Loader2 className="size-5 animate-spin" />
-              Loading conversation...
-            </div>
-          ) : messages.length === 0 ? (
-            <div className="flex flex-1 flex-col justify-center pb-8">
-              <div className="mx-auto w-full max-w-xl text-center">
-                <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-lime-100 to-teal-200 text-emerald-900 ring-1 ring-emerald-900/5">
-                  <Sparkles className="size-6" />
-                </span>
-                <h2 className="mt-5 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-                  What are we creating today?
-                </h2>
-                <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500 sm:text-base">
-                  Create cool social media content with captions and more.
+        <div
+          className={`flex flex-col border-b border-slate-200/70 ${
+            isSidebarCollapsed
+              ? "items-center gap-2 p-2"
+              : "gap-2 p-3"
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => setIsSidebarCollapsed((collapsed) => !collapsed)}
+            aria-label={
+              isSidebarCollapsed
+                ? "Expand chat history sidebar"
+                : "Collapse chat history sidebar"
+            }
+            aria-expanded={!isSidebarCollapsed}
+            title={
+              isSidebarCollapsed
+                ? "Expand chat history sidebar"
+                : "Collapse chat history sidebar"
+            }
+            className={`inline-flex size-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white/70 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 ${
+              isSidebarCollapsed ? "self-center" : "self-end"
+            }`}
+          >
+            {isSidebarCollapsed ? (
+              <ChevronRight className="size-4" />
+            ) : (
+              <ChevronLeft className="size-4" />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={startNewChat}
+            disabled={isLoading || isHistoryLoading}
+            aria-label="New chat"
+            title="New chat"
+            className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-emerald-800 px-3 text-sm font-medium text-white transition hover:bg-emerald-900 disabled:opacity-50 ${
+              isSidebarCollapsed ? "w-9 px-0" : "w-full"
+            }`}
+          >
+            <Plus className="size-4" />
+            {!isSidebarCollapsed && "New chat"}
+          </button>
+        </div>
+
+        <div
+          className={`min-h-0 flex-1 overflow-y-auto py-4 ${
+            isSidebarCollapsed ? "px-2" : "px-3"
+          }`}
+        >
+          {isSidebarCollapsed ? (
+            <button
+              type="button"
+              onClick={() => setIsSidebarCollapsed(false)}
+              aria-label="Expand chat history sidebar"
+              aria-expanded="false"
+              title="Expand chat history sidebar"
+              className="flex size-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white/70 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700"
+            >
+              <History className="size-4" />
+            </button>
+          ) : (
+            <h2 className="flex items-center gap-2 px-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <History className="size-3.5" />
+              Chat history
+            </h2>
+          )}
+
+          {!isSidebarCollapsed && (
+            conversations.length === 0 ? (
+              <p className="px-2 py-4 text-xs text-slate-500">
+                No conversations yet.
+              </p>
+            ) : (
+              <ul className="ml-2 mt-2 space-y-0.5 border-l border-slate-200 pl-2">
+                {[...conversations].reverse().map((conversation) => (
+                  <li key={conversation.conversation_id}>
+                    <HistoryRow
+                      conversation={conversation}
+                      active={conversation.conversation_id === conversationId}
+                      disabled={isLoading || isHistoryLoading}
+                      onClick={() =>
+                        void loadConversation(conversation.conversation_id)
+                      }
+                    />
+                  </li>
+                ))}
+              </ul>
+            )
+          )}
+        </div>
+      </aside>
+
+      <div className="relative z-10 flex min-w-0 flex-1 flex-col">
+        <main
+          aria-label="Chat with Ruixen AI"
+          className="min-h-0 flex-1 overflow-y-auto px-4 py-8 sm:px-6"
+        >
+          <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col">
+            {isHistoryLoading ? (
+              <div className="flex flex-1 items-center justify-center gap-2 text-sm text-slate-500">
+                <Loader2 className="size-5 animate-spin" />
+                Loading conversation...
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="flex flex-1 flex-col justify-center pb-8">
+                <div className="mx-auto w-full max-w-xl text-center">
+                  <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-lime-100 to-teal-200 text-emerald-900 ring-1 ring-emerald-900/5">
+                    <Sparkles className="size-6" />
+                  </span>
+                  <h2 className="mt-5 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
+                    What are we creating today?
+                  </h2>
+                  <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500 sm:text-base">
+                    Create cool social media content with captions and more.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div
+                className="flex flex-1 flex-col gap-6 py-2"
+                role="log"
+                aria-live="polite"
+                aria-label="Conversation"
+              >
+                {messages.map((chatMessage) =>
+                  chatMessage.role === "user" ? (
+                    <div key={chatMessage.id} className="flex justify-end">
+                      <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-tr-sm bg-emerald-800 px-4 py-3 text-sm leading-6 text-white shadow-sm sm:max-w-[75%]">
+                        <ReactMarkdown>{chatMessage.content}</ReactMarkdown>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      key={chatMessage.id}
+                      className="flex items-start gap-3"
+                    >
+                      <span
+                        className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
+                          chatMessage.isError
+                            ? "bg-red-100 text-red-700"
+                            : "bg-gradient-to-br from-lime-200 to-teal-300 text-emerald-950"
+                        }`}
+                      >
+                        {chatMessage.isError ? (
+                          <AlertCircle className="size-4" />
+                        ) : (
+                          <Bot className="size-4" />
+                        )}
+                      </span>
+
+                      <div
+                        role={chatMessage.isError ? "alert" : undefined}
+                        className={`max-w-[85%] break-words rounded-2xl rounded-tl-sm border px-4 py-3 text-sm leading-6 shadow-sm sm:max-w-[75%] ${
+                          chatMessage.isError
+                            ? "border-red-200 bg-red-50 text-red-800"
+                            : "border-slate-200 bg-white text-slate-700"
+                        }`}
+                      >
+                        <ReactMarkdown>{chatMessage.content}</ReactMarkdown>
+
+                        {chatMessage.retryPrompt && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void retry(chatMessage.retryPrompt!)
+                            }
+                            disabled={isLoading || isHistoryLoading}
+                            className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-700 transition hover:bg-red-100 disabled:opacity-50"
+                          >
+                            <RotateCcw className="size-3" />
+                            Try again
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                )}
+
+                {isLoading && (
+                  <div
+                    className="flex items-start gap-3"
+                    aria-label="Ruixen AI is typing"
+                  >
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-lime-200 to-teal-300 text-emerald-950">
+                      <Bot className="size-4" />
+                    </span>
+                    <div className="flex items-center gap-1 rounded-2xl rounded-tl-sm border border-slate-200 bg-white px-4 py-3.5 shadow-sm">
+                      <span className="size-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.3s]" />
+                      <span className="size-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.15s]" />
+                      <span className="size-1.5 animate-bounce rounded-full bg-slate-400" />
+                    </div>
+                  </div>
+                )}
+
+                <div ref={bottomRef} />
+              </div>
+            )}
+
+            {historyError && (
+              <p role="alert" className="mt-3 text-sm text-red-700">
+                {historyError}
+              </p>
+            )}
+          </div>
+        </main>
+
+        <footer className="px-4 pb-4 pt-3 sm:px-6 sm:pb-5">
+          <form onSubmit={handleSubmit} className="mx-auto w-full max-w-3xl">
+            <div className="rounded-2xl border border-white/70 bg-white/35 shadow-lg shadow-slate-900/10 backdrop-blur-xl transition focus-within:border-emerald-300/80 focus-within:bg-white/45 focus-within:ring-4 focus-within:ring-emerald-700/10">
+              <Textarea
+                ref={textareaRef}
+                value={message}
+                onChange={(event) => setMessage(event.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Message Ruixen AI..."
+                aria-label="Write a message"
+                disabled={isHistoryLoading}
+                className="min-h-0 resize-none border-0 bg-transparent px-4 py-3.5 text-sm leading-6 text-slate-800 shadow-none placeholder:text-slate-400 focus-visible:ring-0 focus-visible:ring-offset-0"
+                style={{ overflow: "hidden" }}
+              />
+
+              <div className="flex items-center justify-between px-3 pb-3">
+                <p className="text-xs text-slate-400">
+                  <span className="hidden sm:inline">Press </span>
+                  <kbd className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 font-sans text-[10px]">
+                    Enter
+                  </kbd>
+                  <span className="hidden sm:inline">
+                    {" "}to send · Shift + Enter for a new line
+                  </span>
                 </p>
+
+                <button
+                  type="submit"
+                  aria-label="Send message"
+                  disabled={!message.trim() || isLoading || isHistoryLoading}
+                  className="flex size-9 items-center justify-center rounded-xl bg-emerald-800 text-white shadow-sm transition hover:bg-emerald-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+                >
+                  {isLoading ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <ArrowUp className="size-4" />
+                  )}
+                </button>
               </div>
             </div>
-          ) : (
-            <div
-              className="flex flex-1 flex-col gap-6 py-2"
-              role="log"
-              aria-live="polite"
-              aria-label="Conversation"
-            >
-              {messages.map((chatMessage) =>
-                chatMessage.role === "user" ? (
-                  <div key={chatMessage.id} className="flex justify-end">
-                    <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-tr-sm bg-emerald-800 px-4 py-3 text-sm leading-6 text-white shadow-sm sm:max-w-[75%]">
-                      <ReactMarkdown>
-                        {chatMessage.content}
-                      </ReactMarkdown>
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    key={chatMessage.id}
-                    className="flex items-start gap-3"
-                  >
-                    <span
-                      className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
-                        chatMessage.isError
-                          ? "bg-red-100 text-red-700"
-                          : "bg-gradient-to-br from-lime-200 to-teal-300 text-emerald-950"
-                      }`}
-                    >
-                      {chatMessage.isError ? (
-                        <AlertCircle className="size-4" />
-                      ) : (
-                        <Bot className="size-4" />
-                      )}
-                    </span>
-
-                    <div
-                      role={chatMessage.isError ? "alert" : undefined}
-                      className={`max-w-[85%] break-words rounded-2xl rounded-tl-sm border px-4 py-3 text-sm leading-6 shadow-sm sm:max-w-[75%] ${
-                        chatMessage.isError
-                          ? "border-red-200 bg-red-50 text-red-800"
-                          : "border-slate-200 bg-white text-slate-700"
-                      }`}
-                    >
-                      <ReactMarkdown>
-                        {chatMessage.content}
-                      </ReactMarkdown>
-
-                      {chatMessage.retryPrompt && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void retry(chatMessage.retryPrompt!)
-                          }
-                          disabled={isLoading || isHistoryLoading}
-                          className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-700 transition hover:bg-red-100 disabled:opacity-50"
-                        >
-                          <RotateCcw className="size-3" />
-                          Try again
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )
-              )}
-
-              {isLoading && (
-                <div
-                  className="flex items-start gap-3"
-                  aria-label="Ruixen AI is typing"
-                >
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-lime-200 to-teal-300 text-emerald-950">
-                    <Bot className="size-4" />
-                  </span>
-                  <div className="flex items-center gap-1 rounded-2xl rounded-tl-sm border border-slate-200 bg-white px-4 py-3.5 shadow-sm">
-                    <span className="size-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.3s]" />
-                    <span className="size-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.15s]" />
-                    <span className="size-1.5 animate-bounce rounded-full bg-slate-400" />
-                  </div>
-                </div>
-              )}
-
-              <div ref={bottomRef} />
-            </div>
-          )}
-
-          {historyError && (
-            <p role="alert" className="mt-3 text-sm text-red-700">
-              {historyError}
-            </p>
-          )}
-        </div>
-      </main>
-
-      <footer className="relative z-10 px-4 pb-4 pt-3 sm:px-6 sm:pb-5">
-        <form onSubmit={handleSubmit} className="mx-auto w-full max-w-3xl">
-          <div className="rounded-2xl border border-white/70 bg-white/35 shadow-lg shadow-slate-900/10 backdrop-blur-xl transition focus-within:border-emerald-300/80 focus-within:bg-white/45 focus-within:ring-4 focus-within:ring-emerald-700/10">
-            <Textarea
-              ref={textareaRef}
-              value={message}
-              onChange={(event) => setMessage(event.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Message Ruixen AI..."
-              aria-label="Write a message"
-              disabled={isHistoryLoading}
-              className="min-h-0 resize-none border-0 bg-transparent px-4 py-3.5 text-sm leading-6 text-slate-800 shadow-none placeholder:text-slate-400 focus-visible:ring-0 focus-visible:ring-offset-0"
-              style={{ overflow: "hidden" }}
-            />
-
-            <div className="flex items-center justify-between px-3 pb-3">
-              <p className="text-xs text-slate-400">
-                <span className="hidden sm:inline">Press </span>
-                <kbd className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 font-sans text-[10px]">
-                  Enter
-                </kbd>
-                <span className="hidden sm:inline">
-                  {" "}to send · Shift + Enter for a new line
-                </span>
-              </p>
-
-              <button
-                type="submit"
-                aria-label="Send message"
-                disabled={!message.trim() || isLoading || isHistoryLoading}
-                className="flex size-9 items-center justify-center rounded-xl bg-emerald-800 text-white shadow-sm transition hover:bg-emerald-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
-              >
-                {isLoading ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <ArrowUp className="size-4" />
-                )}
-              </button>
-            </div>
-          </div>
-        </form>
-      </footer>
+          </form>
+        </footer>
+      </div>
     </section>
   );
 };
