@@ -15,12 +15,11 @@ from DB_Connection.Mongo_Conn import User_account_details , User_post_details , 
 import ast
 from DB_Connection.Cloud_Conn import cloudinary
 import os
-from datetime import datetime
+from datetime import datetime , timezone
 from zoneinfo import ZoneInfo
 from Api_Helper import Platform_maker
 from AI_connection import client
 import uuid
-import datetime
 
 
 app = Flask(__name__)
@@ -376,7 +375,7 @@ def ai_response(conversation_id):
 def message_fetcher(conversation_id):
     user_id = session.get('user_id')
     data = list(Conversation_Storage.find({'user_id':user_id , 'conversation_id':conversation_id} , 
-                                          {'_id': 0 })).sort('created_at' , 1)
+                                          {'_id': 0 }).sort('created_at' , 1))
     
     
     return jsonify({'chat_history':data}) , 200 
