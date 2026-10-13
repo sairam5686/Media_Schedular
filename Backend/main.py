@@ -1,3 +1,5 @@
+from time import timezone
+
 from flask import Flask , request , session , redirect
 import mysql.connector
 from mysql.connector import Error
@@ -9,7 +11,7 @@ from Credential_Helper import Connect_initilizer
 from DB_Connection.Mongo_Conn import user_conn_details
 from functools import wraps
 from postpeer import PostPeer
-from DB_Connection.Mongo_Conn import User_account_details , User_post_details
+from DB_Connection.Mongo_Conn import User_account_details , User_post_details ,     Conversation_Metadata ,Conversation_Storage
 import ast
 from DB_Connection.Cloud_Conn import cloudinary
 import os
@@ -17,6 +19,8 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from Api_Helper import Platform_maker
 from AI_connection import client
+import uuid
+import datetime
 
 
 app = Flask(__name__)
@@ -349,7 +353,33 @@ def ai_response():
     except Error:
         return jsonify({'message':"Ai is not responding please try again later"}) ,  500 
 
-    
+
+@app.route('/conversations' , methods=['GET'] )
+@session_checker
+def conversationfetcher():
+    user_id = session.get('user_id')
+    data = Conversation_Metadata.find({'user_id':user_id})
+    data= list(data)
+    return jsonify(data), 200 
+
+
+@app.route('/conversations' , methods=['POST'] )
+@session_checker
+def conversationMaker():
+    user_id = session.get('user_id')
+    conversation_id = uuid.uuid4
+
+    insert_temp ={
+        'user_id' : user_id, 
+        'conversation_id': conversation_id , 
+        "created_at": datetime.now(tz=timezone.utc)
+    } 
+
+
+    Conversation_Metadata.insert_one(insert_temp)
+    return jsonify({"message":'new conversation seccessfully created' , 'conversation_id': conversation_id}) , 200 
+
+
 
 
 if(__name__ == '__main__'):
