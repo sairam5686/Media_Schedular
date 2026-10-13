@@ -308,16 +308,23 @@ def listing(type , limit):
 
 
 
-@app.route('/ai/response' , methods=['POST'])
+@app.route('/ai/response/<conversation_id>' , methods=['POST'])
 @session_checker
-def ai_response():
-
+def ai_response(conversation_id):
+    user_id = session.get('user_id')
     data = request.get_json()
     user_prompt = data.get('prompt')
-     
-
-
     try:
+        user_chat_dict = {
+            'user_id': user_id , 
+            'text' :  user_prompt , 
+            'conversation_id':conversation_id ,
+            "created_at": datetime.now(tz=timezone.utc) , 
+            "role":'user'
+        }
+        Conversation_Storage.insert_one(user_chat_dict)
+        
+
         chat_completion = client.chat.completions.create(
     messages=[
         # Set an optional system message. This sets the behavior of the
@@ -347,18 +354,39 @@ def ai_response():
         )
 
 
-        print( chat_completion.choices[0].message.content)
-        return jsonify({'message': chat_completion.choices[0].message.content}) , 200
+        ai_chat_dict = {
+            'user_id':user_id , 
+            'conversation_id': conversation_id , 
+            'role': 'ai' , 
+            'text': chat_completion.choices[0].message.content,
+            'created_at':datetime.now(tz=timezone.utc)
+            
+        }
+
+        Conversation_Storage.insert_one(ai_chat_dict)
+        # note : should change the dict of message to ai_response in the frontend
+        return jsonify({'ai_response': chat_completion.choices[0].message.content}) , 200
 
     except Error:
         return jsonify({'message':"Ai is not responding please try again later"}) ,  500 
+
+
+@app.route('conversation/<conversation_id>/message' , methods=['GET'])
+@session_checker
+def message_fetcher(conversation_id):
+    user_id = session.get('user_id')
+    data = list(Conversation_Storage.find({'user_id':user_id , 'conversation_id':conversation_id} , 
+                                          {'_id': 0 }))
+    
+    
+    return jsonify({'chat_history':data}) , 200 
 
 
 @app.route('/conversations' , methods=['GET'] )
 @session_checker
 def conversationfetcher():
     user_id = session.get('user_id')
-    data = Conversation_Metadata.find({'user_id':user_id})
+    data = Conversation_Metadata.find({'user_id':user_id} , {'_id': 0 })
     data= list(data)
     return jsonify(data), 200 
 
