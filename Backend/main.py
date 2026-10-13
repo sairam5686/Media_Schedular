@@ -371,12 +371,12 @@ def ai_response(conversation_id):
         return jsonify({'message':"Ai is not responding please try again later"}) ,  500 
 
 
-@app.route('conversation/<conversation_id>/message' , methods=['GET'])
+@app.route('/conversation/<conversation_id>/message' , methods=['GET'])
 @session_checker
 def message_fetcher(conversation_id):
     user_id = session.get('user_id')
     data = list(Conversation_Storage.find({'user_id':user_id , 'conversation_id':conversation_id} , 
-                                          {'_id': 0 }))
+                                          {'_id': 0 })).sort('created_at' , 1)
     
     
     return jsonify({'chat_history':data}) , 200 
@@ -386,7 +386,7 @@ def message_fetcher(conversation_id):
 @session_checker
 def conversationfetcher():
     user_id = session.get('user_id')
-    data = Conversation_Metadata.find({'user_id':user_id} , {'_id': 0 })
+    data = Conversation_Metadata.find({'user_id':user_id} , {'_id': 0 }).sort('conversation_id' , 1)
     data= list(data)
     return jsonify(data), 200 
 
@@ -395,7 +395,7 @@ def conversationfetcher():
 @session_checker
 def conversationMaker():
     user_id = session.get('user_id')
-    conversation_id = uuid.uuid4
+    conversation_id = str(uuid.uuid4())
 
     insert_temp ={
         'user_id' : user_id, 
